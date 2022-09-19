@@ -11,6 +11,7 @@
 """
 
 from pathlib import Path
+from decouple import config
 from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -137,4 +138,5 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=6),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=3),
+    "SIGNING_KEY": "cfe2295948f9e03cf934950a1f8c78ee89e42a949d76983acb23e3dd00b2e75e"
 }

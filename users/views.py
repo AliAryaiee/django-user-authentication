@@ -1,8 +1,12 @@
+import jwt
+import datetime
+from decouple import config
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions, exceptions, status
 
 from . import serializers
+from App.settings import SIMPLE_JWT, SECRET_KEY
 
 
 class UserRegister(APIView):
@@ -31,26 +35,38 @@ class UserProfile(APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_user_object(self, username: str):
+    def get_user_object(self, user_id: int):
         """
             Find User by Username
         """
         try:
-            return serializers.User.objects.get(username=username)
+            return serializers.User.objects.get(id=user_id)
         except serializers.User.DoesNotExist:
             return None
 
-    def get(self, request, username: str):
+    def get(self, request):
         """
             GET Request
         """
-        db_user = self.get_user_object(username=username)
-        if db_user:
-            serialized_data = serializers.UserRegisterSerializer(
-                instance=db_user
+        JWT = request.headers["Authorization"].split(" ")[-1]
+        if not JWT:
+            raise exceptions.AuthenticationFailed("Unauthenticated!")
+        try:
+            payload = jwt.decode(
+                JWT, SIMPLE_JWT.get("SIGNING_KEY"),
+                algorithms=["HS256"]
             )
-            return Response(serialized_data.data, status=status.HTTP_200_OK)
-        Response(
-            {"response": f"There Is Not User by Username ({username})"},
-            status=status.HTTP_400_BAD_REQUEST
+            db_user = self.get_user_object(user_id=int(payload["user_id"]))
+            if db_user:
+                serialized_data = serializers.UserRegisterSerializer(
+                    instance=db_user
+                )
+                return Response(serialized_data.data, status=status.HTTP_200_OK)
+        except jwt.ExpiredSignatureError:
+            raise exceptions.AuthenticationFailed("Unauthenticated!")
+        except jwt.InvalidTokenError:
+            raise exceptions.AuthenticationFailed("Invalid Token")
+        return Response(
+            {"response": "Unauthenticated"},
+            status=status.HTTP_401_UNAUTHORIZED
         )
